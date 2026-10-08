@@ -1,0 +1,36 @@
+{
+  "name": "reanmate-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build && node scripts/write-version-metadata.mjs",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "test": "npm run build && node --env-file-if-exists=.env --test test/*.test.mjs",
+    "admin:promote": "node --env-file-if-exists=.env scripts/promote-admin.mjs",
+    "chapters:seed": "node --env-file-if-exists=.env scripts/seed-chapters.mjs"
+  },
+  "dependencies": {
+    "@better-auth/mongo-adapter": "1.7.3",
+    "@breezystack/lamejs": "1.2.7",
+    "@google/genai": "^2.22.0",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "better-auth": "1.7.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "mongodb": "^7.6.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.2.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.2"
+  }
+}

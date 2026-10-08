@@ -1,0 +1,11 @@
+node_modules
+dist
+.env*
+!.env.example
+*.tsbuildinfo
+.playwright-mcp/
+
+# Google Cloud service account keys — never commit these
+*service-account*.json
+gcp-key.json
+ebay-ai-503901-1d4319135725.json

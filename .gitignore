@@ -1,0 +1,5 @@
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Build output not covered by per-app ignores
+reanmate-backend/.next/
