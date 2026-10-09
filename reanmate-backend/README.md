@@ -167,7 +167,7 @@ Set frontend `API_URL` to the backend address reachable by the Next.js server.
 Use `NODE_ENV=production`, allow the backend host's outbound IP in Atlas, and set
 `HOST=0.0.0.0` if the hosting platform requires an externally bound port.
 `TRUST_PROXY` defaults to `loopback`; for a remote proxy, set its exact IP/subnet
-and restrict direct backend ingress. Do not trust arbitrary forwarded headers.
+or a hop count (`1` on Render) and restrict direct backend ingress. Do not trust arbitrary forwarded headers.
 Keep the session secret stable across restarts and replicas.
 
 Chapters (student reads and admin create/edit/approve), Gemini chat, Gemini

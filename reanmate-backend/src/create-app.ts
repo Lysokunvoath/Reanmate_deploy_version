@@ -13,8 +13,10 @@ export async function createApp() {
   app.enableCors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000', credentials: true });
   const server = app.getHttpAdapter().getInstance();
   // Only the local Next.js proxy is trusted by default. Configure the exact
-  // proxy subnet when deploying the API behind a remote reverse proxy.
-  server.set('trust proxy', process.env.TRUST_PROXY ?? 'loopback');
+  // proxy subnet, or a hop count (e.g. 1 on Render), when deploying the API
+  // behind a remote reverse proxy.
+  const trustProxy = process.env.TRUST_PROXY ?? 'loopback';
+  server.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
   const handler = toNodeHandler(app.get<AuthInstance>(AUTH_INSTANCE));
   server.all(`${AUTH_BASE_PATH}/*splat`, (req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Cache-Control', 'private, no-store');
