@@ -80,9 +80,8 @@ export class ChatService {
     let replyText: string;
     try {
       replyText = await this.gemini.generateReply(
-        buildSystemInstruction(chapter),
+        buildSystemInstruction(chapter, this.chapters.getVideoNotes(chapter)),
         conversation,
-        getGeminiVideoUri(chapter.moeysEmbedUrl),
       );
     } catch (error) {
       console.error('[Chat] Gemini request failed:', error);
@@ -119,7 +118,7 @@ function toChatMessage(doc: ChatMessageDocument): ChatMessage {
   };
 }
 
-function buildSystemInstruction(chapter: Chapter): string {
+function buildSystemInstruction(chapter: Chapter, videoNotes: string): string {
   const source = chapter.sourceText.slice(0, MAX_SOURCE_CHARS);
   return [
     'អ្នកគឺជា ReanMate (មិត្ត AI) — មិត្តភក្តិដែលជួយសិស្សរៀន មិនមែនជាគ្រូបង្រៀនទេ។',
@@ -127,29 +126,7 @@ function buildSystemInstruction(chapter: Chapter): string {
     `មេរៀនបច្ចុប្បន្ន៖ "${chapter.title}"`,
     `សេចក្តីសង្ខេបមេរៀន៖\n${chapter.summary}`,
     `ខ្លឹមសារពេញលេញនៃមេរៀន (សម្រាប់យោង)៖\n${source}`,
+    ...(videoNotes ? [`កំណត់ត្រាពីវីដេអូមេរៀន៖\n${videoNotes}`] : []),
     'ត្រូវផ្អែកចម្លើយរបស់អ្នកលើខ្លឹមសារខាងលើ។ បើសំណួរនោះមិនមានចម្លើយក្នុងខ្លឹមសារនេះទេ សូមប្រាប់ត្រង់ៗថាអ្នកមិនដឹង ជាជាងបង្កើតចម្លើយមិនពិត។',
   ].join('\n\n');
-}
-
-function getGeminiVideoUri(embedUrl: string): string | undefined {
-  if (!embedUrl) return undefined;
-
-  try {
-    const url = new URL(embedUrl);
-    if (url.protocol !== 'https:') return undefined;
-
-    if (url.hostname === 'www.youtube.com' || url.hostname === 'youtube.com') {
-      const embedMatch = url.pathname.match(/^\/embed\/([^/]+)/);
-      if (embedMatch) return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
-    }
-
-    if (url.hostname === 'youtu.be') {
-      const videoId = url.pathname.slice(1).split('/')[0];
-      if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
-    }
-
-    return url.toString();
-  } catch {
-    return undefined;
-  }
 }

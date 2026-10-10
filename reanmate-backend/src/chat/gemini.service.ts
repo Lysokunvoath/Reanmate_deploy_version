@@ -1,17 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, MediaResolution } from '@google/genai';
 import { vertexAuthOptions } from './vertex-credentials.js';
 
 export interface ChatTurn {
   role: 'user' | 'model';
   text: string;
-}
-
-interface VideoPart {
-  fileData: {
-    fileUri: string;
-    mimeType: 'video/*';
-  };
 }
 
 /**
@@ -35,18 +28,34 @@ export class GeminiService {
     return this.client;
   }
 
-  async generateReply(systemInstruction: string, history: ChatTurn[], videoUri?: string): Promise<string> {
+  async generateReply(systemInstruction: string, history: ChatTurn[]): Promise<string> {
     const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     const response = await this.getClient().models.generateContent({
       model,
-      contents: history.map((turn, index) => ({
-        role: turn.role,
-        parts: [
-          ...(index === 0 && videoUri ? [{ fileData: { fileUri: videoUri, mimeType: 'video/*' } }] : []),
-          { text: turn.text },
-        ] as Array<{ text: string } | VideoPart>,
-      })),
+      contents: history.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
       config: { systemInstruction },
+    });
+    const text = response.text?.trim();
+    if (!text) throw new Error('Gemini returned an empty response.');
+    return text;
+  }
+
+  /**
+   * Single-turn request about a video. Low media resolution keeps long lesson
+   * videos well under the model's input-token limit; slides and handwriting
+   * stay readable at it.
+   */
+  async generateFromVideo(systemInstruction: string, videoUri: string, prompt: string): Promise<string> {
+    const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+    const response = await this.getClient().models.generateContent({
+      model,
+      contents: [
+        {
+          role: 'user',
+          parts: [{ fileData: { fileUri: videoUri, mimeType: 'video/*' } }, { text: prompt }],
+        },
+      ],
+      config: { systemInstruction, mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW },
     });
     const text = response.text?.trim();
     if (!text) throw new Error('Gemini returned an empty response.');

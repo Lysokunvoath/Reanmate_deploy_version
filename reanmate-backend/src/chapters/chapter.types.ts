@@ -26,6 +26,9 @@ export interface Chapter {
   moeysCredit: string;
   status: ChapterStatus;
   questions: Question[];
+  /** Gemini's text notes on the video at `videoNotesSource`; see video-notes.ts. */
+  videoNotes?: string;
+  videoNotesSource?: string;
 }
 
 export type QuestionInput = Pick<Question, 'prompt' | 'options' | 'correctIndex' | 'explanation'>;
