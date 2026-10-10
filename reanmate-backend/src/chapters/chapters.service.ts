@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Collection } from 'mongodb';
 import { DatabaseService } from '../database/database.service.js';
 import { GeminiService } from '../chat/gemini.service.js';
+import { getGeminiVideoUri, writeVideoNotes } from './video-notes.js';
 import type {
   Chapter,
   ChapterInput,
@@ -48,6 +49,9 @@ export class ChaptersService {
     private readonly gemini: GeminiService,
   ) {}
 
+  // Chapter videos whose notes are being written, so simultaneous chats start one Gemini call.
+  private readonly pendingVideoNotes = new Set<string>();
+
   private get collection(): Collection<ChapterDocument> {
     return this.database.db.collection<ChapterDocument>('chapters');
   }
@@ -62,7 +66,7 @@ export class ChaptersService {
   async findApproved(grade: Grade, subject: SubjectId): Promise<Chapter[]> {
     await this.ensureIndexes();
     const chapters = await this.collection
-      .find({ grade, subject, status: 'approved' }, { projection: { _id: 0, sourceText: 0, createdAt: 0, updatedAt: 0 } })
+      .find({ grade, subject, status: 'approved' }, { projection: { _id: 0, sourceText: 0, videoNotes: 0, videoNotesSource: 0, createdAt: 0, updatedAt: 0 } })
       .sort({ sortOrder: 1 })
       .toArray();
     return chapters.map((chapter) => ({ ...chapter, sourceText: '' }));
@@ -100,6 +104,29 @@ export class ChaptersService {
     if (questions) set.questions = toQuestions(id, questions);
     await this.collection.updateOne({ id }, { $set: set });
     return this.findById(id, true);
+  }
+
+  /**
+   * Stored text notes on the chapter's video, or '' when there is no video or
+   * they aren't written yet. Missing or stale notes (the video URL changed)
+   * are written in the background, so chat never waits the minutes this takes.
+   */
+  getVideoNotes(chapter: Chapter): string {
+    const videoUri = getGeminiVideoUri(chapter.moeysEmbedUrl);
+    if (!videoUri) return '';
+    if (chapter.videoNotes && chapter.videoNotesSource === videoUri) return chapter.videoNotes;
+
+    const key = `${chapter.id} ${videoUri}`;
+    if (!this.pendingVideoNotes.has(key)) {
+      this.pendingVideoNotes.add(key);
+      writeVideoNotes(this.gemini, videoUri)
+        .then((videoNotes) =>
+          this.collection.updateOne({ id: chapter.id }, { $set: { videoNotes, videoNotesSource: videoUri } }),
+        )
+        .catch((error) => console.error(`[Chapters] Video notes for ${chapter.id} failed:`, error))
+        .finally(() => this.pendingVideoNotes.delete(key));
+    }
+    return '';
   }
 
   /** Asks Gemini for a Khmer summary + MCQs grounded in the chapter's stored sourceText. */
